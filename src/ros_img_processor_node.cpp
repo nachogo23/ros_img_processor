@@ -44,7 +44,6 @@ RosImgProcessorNode::~RosImgProcessorNode()
 
 void RosImgProcessorNode::process()
 {
-  
     cv::Rect_<int> box;
 
     //check if new image is there

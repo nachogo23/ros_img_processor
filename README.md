@@ -12,7 +12,7 @@ Check your webcam encodings (yuyv,mjpeg,...) and set them accordingly at file la
 
 Repositori original:https://github.com/beta-robots/ros_img_processor
 
-Inicialment el node ens permet veure en pantalla la imatge original de la webcam (image_row) i la imatge rectificada(image_out) seguint els parametres del fitxer "usb_camera.yaml" després d'haver fet la calibració. Es dibuixa també un quadrat al centre de la imatge. D'altra banda amb rviz es mostra un eix cartesià de cordenades amb un vector fixe representat.
+Inicialment el node ens permet veure en pantalla la imatge original de la webcam (image_row) i la imatge rectificada(image_out) seguint els parametres després d'haver fet la calibració. Es dibuixa també un quadrat al centre de la imatge. D'altra banda amb rviz es mostra un eix cartesià de cordenades amb un vector fixe representat.
 
 S'hafegeix part del codi del paquets circle_cedection per mostrar a la imatge rectificada (image_out), la detecció de cercles. Es fixa el paràmetre min_dist a un valor alt (10000) per asegurar que només es detecti un cercle en l'area de la imatge.
 
