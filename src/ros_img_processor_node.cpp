@@ -1,4 +1,25 @@
 #include "ros_img_processor_node.h"
+//Include Openc CV
+#include "opencv2/opencv.hpp"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include <math.h>
+//std
+#include <iostream>
+#include <cstdlib>
+#include <vector>
+using namespace std; //to avoid std::
+
+// Necesary constants to use The Hough Transform
+
+const int GAUSSIAN_BLUR_SIZE = 7;
+const double GAUSSIAN_BLUR_SIGMA = 2;
+const double CANNY_EDGE_TH = 150;
+const double HOUGH_ACCUM_RESOLUTION = 2;
+const double MIN_CIRCLE_DIST = 10000;
+const double HOUGH_ACCUM_TH = 70;
+const int MIN_RADIUS = 1;
+const int MAX_RADIUS = 1000;
 
 RosImgProcessorNode::RosImgProcessorNode() :
     nh_(ros::this_node::getName()),
@@ -23,6 +44,7 @@ RosImgProcessorNode::~RosImgProcessorNode()
 
 void RosImgProcessorNode::process()
 {
+  
     cv::Rect_<int> box;
 
     //check if new image is there
@@ -31,20 +53,51 @@ void RosImgProcessorNode::process()
         // copy the input image to the out one
         cv_img_out_.image = cv_img_ptr_in_->image;
 
-		// find the ball
-		//TODO
 
-		// find the direction vector
-		//TODO
-		direction_ << 1,1,2.5;  // just to draw something with the arrow marker
+    // find the ball, using The Hough Transform
+    cv::Mat gray_image;
+    vector<cv::Vec3f> circles;
+    cv::Point center;
+    int radius;
 
-        // draw a bounding box around the ball
-        box.x = (cv_img_ptr_in_->image.cols/2)-10;
-        box.y = (cv_img_ptr_in_->image.rows/2)-10;
-        box.width = 20;
-        box.height = 20;
-        cv::rectangle(cv_img_out_.image, box, cv::Scalar(0,255,255), 3);
-    }
+          // If input image is RGB, convert it to gray
+
+          cv::cvtColor(cv_img_out_.image, gray_image, CV_BGR2GRAY);
+
+          //Reduce the noise so we avoid false circle detection
+          cv::GaussianBlur( gray_image, gray_image, cv::Size(GAUSSIAN_BLUR_SIZE, GAUSSIAN_BLUR_SIZE), GAUSSIAN_BLUR_SIGMA );
+
+
+          //Apply the Hough Transform to find the circles
+          cv::HoughCircles( gray_image, circles, CV_HOUGH_GRADIENT, HOUGH_ACCUM_RESOLUTION, MIN_CIRCLE_DIST, CANNY_EDGE_TH, HOUGH_ACCUM_TH, MIN_RADIUS, MAX_RADIUS );
+
+          //draw all circles as in circle_detection, and print the center.
+          for(unsigned int ii = 0; ii < circles.size(); ii++ )
+          {
+              if ( circles[ii][0] != -1 )
+              {
+                      center = cv::Point(cvRound(circles[ii][0]), cvRound(circles[ii][1]));
+                      radius = cvRound(circles[ii][2]);
+                      cv::circle(cv_img_out_.image, center, 5, cv::Scalar(0,0,255), -1, 8, 0 );// circle center in blue
+                      cv::circle(cv_img_out_.image, center, radius, cv::Scalar(255,0,0), 3, 8, 0 );// circle perimeter in red
+                      cout<<"center at: "<<center.x<<", "<<center.y<<endl;
+              }
+          //Find the direction vector and print it on terminal
+            Eigen::Vector3d point;
+            point[0]= center.x;
+            point[1]=center.y;
+            point[2]= 1;
+            direction_ = matrixK_.inverse() * point;
+            cout<<"The direction vector of the circle is: ("<<direction_[0]<<", "<<direction_[1]<<", "<<direction_[2]<<")"<<endl;
+
+            //Define a point where a multiple of the director vector is pointing to be able to draw it
+            cv::Point point2;
+            point2 = cv::Point(center.x+500*direction_[0], center.y+500*direction_[1]);
+
+          //Draw a multiple ofthe director vector on the image in black color
+            cv::arrowedLine(cv_img_out_.image,center,point2,cv::Scalar(0,0,0),3);
+          }
+        }
 
     //reset input image
     cv_img_ptr_in_ = nullptr;
@@ -144,5 +197,5 @@ void RosImgProcessorNode::cameraInfoCallback(const sensor_msgs::CameraInfo & _ms
 	matrixK_  << _msg.K[0],_msg.K[1],_msg.K[2],
                  _msg.K[3],_msg.K[4],_msg.K[5],
                  _msg.K[6],_msg.K[7],_msg.K[8];
-	//std::cout << "matrixK: " << std::endl << matrixK_ << std::endl;
+
 }
